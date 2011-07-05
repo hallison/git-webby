@@ -35,6 +35,7 @@ class SmartHttp < Sinatra::Base
 
   mime_type :text,   "text/plain"
   mime_type :loose,  "application/x-git-loose-object"
+  mime_type :packed, "application/x-git-packed-objects"
 
   get "/:repository.git/HEAD" do |repository|
     content_type :text
@@ -44,6 +45,11 @@ class SmartHttp < Sinatra::Base
   get %r{/(.*?\.git)/objects/([0-9a-f]{2})/([0-9a-f]{38})$} do |repository, prefix, sufix|
     content_type :loose
     send_file(path_to(repository, "objects", prefix, sufix))
+  end
+
+  get %r{/(.*?\.git)/objects/pack/(pack-[0-9a-f]{40}.(pack|idx))$} do |repository, pack, ext|
+    content_type :packed
+    send_file(path_to(repository, "objects", "pack", pack))
   end
 
 end # SmartHttp
