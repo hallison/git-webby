@@ -33,17 +33,17 @@ class SmartHttp < Sinatra::Base
     File.read(path_to("#{repository}.git", name))
   end
 
-  mime_type :text, "text/plain"
-  mime_type :loose, "application/x-git-loose-object"
+  mime_type :text,   "text/plain"
+  mime_type :loose,  "application/x-git-loose-object"
 
   get "/:repository.git/HEAD" do |repository|
     content_type :text
     read_file(repository, "HEAD")
   end
   
-  get %r{/(.*?\.git)/objects/([0-9a-f]{2})/([0-9a-f]{38})} do |repository, prefix, sufix|
+  get %r{/(.*?\.git)/objects/([0-9a-f]{2})/([0-9a-f]{38})$} do |repository, prefix, sufix|
     content_type :loose
-    path_to(repository, prefix, sufix)
+    send_file(path_to(repository, "objects", prefix, sufix))
   end
 
 end # SmartHttp
