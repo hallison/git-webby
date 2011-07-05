@@ -29,8 +29,8 @@ class SmartHttp < Sinatra::Base
     File.join(settings.config.project_root, *args)
   end
 
-  def read_file(repository, name)
-    File.read(path_to("#{repository}.git", name))
+  def read_file(repository, *pathtofile)
+    File.read(path_to("#{repository}.git", pathtofile))
   end
 
   mime_type :text,   "text/plain"
@@ -41,7 +41,12 @@ class SmartHttp < Sinatra::Base
     content_type :text
     read_file(repository, "HEAD")
   end
-  
+
+  get "/:repository.git/info/refs" do |repository|
+    content_type :text
+    read_file(repository, "info", "refs")
+  end
+
   get %r{/(.*?\.git)/objects/([0-9a-f]{2})/([0-9a-f]{38})$} do |repository, prefix, sufix|
     content_type :loose
     send_file(path_to(repository, "objects", prefix, sufix))

@@ -40,6 +40,14 @@ class SmartHttpTest < Test::Unit::TestCase
     end
   end
 
+  should "receive information about references" do
+    get "/mycode.git/info/refs" do
+      assert_equal 200, response.status
+      assert_match "refs/heads/master", response.body
+      assert_match "refs/tags/v0.1.0",  response.body
+    end
+  end
+
   should "receive objects" do
     @objects.each do |object|
       get "/mycode.git/objects/#{object}" do
