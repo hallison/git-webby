@@ -16,10 +16,6 @@ class SmartHttpTest < Test::Unit::TestCase
       "be/118435b9d908fd4a689cd8b0cc98059911a31a",
       "ed/10cfcf72862e140c97fe899cba2a55f4cb4c20"
     ]
-    @packs = [
-      "pack/pack-40a8636b62258fffd78ec1e8d254116e72d385a9.idx",
-      "pack/pack-40a8636b62258fffd78ec1e8d254116e72d385a9.pack"
-    ]
   end
 
   def app
@@ -58,11 +54,23 @@ class SmartHttpTest < Test::Unit::TestCase
   end
 
   should "receive packs" do
-    @packs.each do |pack|
-      get "/mycode.git/objects/#{pack}" do
-        assert_equal 200, response.status
-        assert_equal "application/x-git-packed-objects", response.content_type
-      end
+    get "/mycode.git/objects/pack/pack-40a8636b62258fffd78ec1e8d254116e72d385a9.idx" do
+      assert_equal 200, response.status
+      assert_equal "application/x-git-packed-objects-toc", response.content_type
+    end
+
+    get "/mycode.git/objects/pack/pack-40a8636b62258fffd78ec1e8d254116e72d385a9.pack" do
+      assert_equal 200, response.status
+      assert_equal "application/x-git-packed-objects", response.content_type
+    end
+  end
+
+  should "receive information references packed and upload advertisement" do
+    get "/mycode.git/info/refs", :service => "git-upload-pack" do
+    assert_equal 200, response.status
+    assert_equal "application/x-git-upload-pack-advertisement", response.content_type
+    assert_equal "001e# service=git-upload-pack", response.body.split("\n").first
+    assert_match 'multi_ack_detailed', response.body
     end
   end
 
