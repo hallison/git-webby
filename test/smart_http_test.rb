@@ -67,10 +67,19 @@ class SmartHttpTest < Test::Unit::TestCase
 
   should "receive information references packed and upload advertisement" do
     get "/mycode.git/info/refs", :service => "git-upload-pack" do
-    assert_equal 200, response.status
-    assert_equal "application/x-git-upload-pack-advertisement", response.content_type
-    assert_equal "001e# service=git-upload-pack", response.body.split("\n").first
-    assert_match 'multi_ack_detailed', response.body
+      assert_equal 200, response.status
+      assert_equal "application/x-git-upload-pack-advertisement", response.content_type
+      assert_equal "001e# service=git-upload-pack", response.body.split("\n").first
+      assert_match 'multi_ack_detailed', response.body
+    end
+
+    get "/mycode.git/info/refs", :service => "git-receive-pack" do
+      assert_equal 200, response.status
+      assert_equal "application/x-git-receive-pack-advertisement", response.content_type
+      assert_equal "001f# service=git-receive-pack", response.body.split("\n").first
+      assert_match "report-status", response.body
+      assert_match "delete-refs",   response.body
+      assert_match "ofs-delta",     response.body
     end
   end
 

@@ -33,6 +33,10 @@ class SmartHttp < Sinatra::Base
     File.read(path_to("#{repository}.git", pathtofile))
   end
 
+  def chdir(repository, &block)
+    Dir.chdir(path_to("#{repository}.git"), &block)
+  end
+
   def service_requested?
     not params[:service].nil?
   end
@@ -48,8 +52,9 @@ class SmartHttp < Sinatra::Base
     content_type("application/x-git-#{name}-#{suffixes.compact.join('-')}")
   end
 
-  def packet_line(string)
-    (string.size + 4).to_s(base=16).rjust(4, '0') + string
+  def packet_line
+    line = "# service=git-#{service}\n"
+    (line.size + 4).to_s(base=16).rjust(4, '0') + line
   end
 
   def packet_flush
@@ -73,11 +78,14 @@ class SmartHttp < Sinatra::Base
 
   get "/:repository.git/info/refs" do |repository|
     if service_requested?
-      content_type_for_git service, :advertisement
-      response.body  = ""
-      response.body += packet_line("# service=git-#{service}\n")
-      response.body += packet_flush
-      response.body += git(service, "--statless-rpc --advertise-refs .")
+      chdir repository do
+        content_type_for_git service, :advertisement
+        response.body  = ""
+        response.body += packet_line
+        response.body += packet_flush
+        response.body += git(service, "--stateless-rpc --advertise-refs .")
+        response.finish
+      end
     else
       content_type "text/plain"
       read_file(repository, "info", "refs")
