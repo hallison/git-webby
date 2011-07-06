@@ -5,12 +5,15 @@ module Webby
 class Config
   attr_accessor :project_root
 
+  attr_accessor :git_path
+
   attr_accessor :upload_pack
 
   attr_accessor :receive_pack
 
   def initialize(attributes = {})
     defaults = { :project_root    => ".",
+                 :git_path        => "/usr/bin/git",
                  :upload_pack     => true,
                  :receive_pack    => true }
     defaults.update(attributes).each do |key, value|
@@ -25,16 +28,28 @@ class SmartHttp < Sinatra::Base
 
   set :config, Config.new(:project_root => "test/fixtures")
 
-  def path_to(*args)
+  def project_path_to(*args)
     File.join(settings.config.project_root, *args)
   end
 
-  def read_file(repository, *pathtofile)
-    File.read(path_to("#{repository}.git", pathtofile))
+  def gitdir(name)
+    unless name =~ /\w\.git/ # not bare directory
+      File.join(name, ".git")
+    else
+      name
+    end
   end
 
-  def chdir(repository, &block)
-    Dir.chdir(path_to("#{repository}.git"), &block)
+  def path_to(name, *args)
+    project_path_to(gitdir(name), *args)
+  end
+
+  def read_file(dirname, *pathtofile)
+    File.read(path_to(dirname, pathtofile))
+  end
+
+  def chdir(dirname, &block)
+    Dir.chdir(path_to(dirname), &block)
   end
 
   def service_requested?
@@ -61,9 +76,12 @@ class SmartHttp < Sinatra::Base
     "0000"
   end
 
-  # only long arguments
-  def git(command, *args)
-    %x[git #{command.to_s.gsub("_","-")} #{args.join(" ")}]
+  def git_cli(command, *args)
+    %Q[#{settings.config.git_path} #{args.unshift(command.to_s.gsub("_","-")).compact.join(" ")}]
+  end
+
+  def git_run(command, *args)
+    %x[#{git_cli command, *args}]
   end
 
   before do
@@ -71,19 +89,19 @@ class SmartHttp < Sinatra::Base
     response["Pragma"] = "no-cache"
   end
 
-  get "/:repository.git/HEAD" do |repository|
+  get "/:repository/HEAD" do |repository|
     content_type "text/plain"
     read_file(repository, "HEAD")
   end
 
-  get "/:repository.git/info/refs" do |repository|
+  get "/:repository/info/refs" do |repository|
     if service_requested?
       chdir repository do
         content_type_for_git service, :advertisement
         response.body  = ""
         response.body += packet_line
         response.body += packet_flush
-        response.body += git(service, "--stateless-rpc --advertise-refs .")
+        response.body += git_run(service, "--stateless-rpc --advertise-refs .")
         response.finish
       end
     else
@@ -92,12 +110,12 @@ class SmartHttp < Sinatra::Base
     end
   end
 
-  get %r{/(.*?\.git)/objects/([0-9a-f]{2})/([0-9a-f]{38})$} do |repository, prefix, suffix|
+  get %r{/(.*?)/objects/([0-9a-f]{2})/([0-9a-f]{38})$} do |repository, prefix, suffix|
     content_type_for_git :loose, :object
     send_file(path_to(repository, "objects", prefix, suffix))
   end
 
-  get %r{/(.*?\.git)/objects/pack/(pack-[0-9a-f]{40}.(pack|idx))$} do |repository, pack, ext|
+  get %r{/(.*?)/objects/pack/(pack-[0-9a-f]{40}.(pack|idx))$} do |repository, pack, ext|
     content_type_for_git :packed, :objects, (ext == "idx" ? :toc : nil)
     send_file(path_to(repository, "objects", "pack", pack))
   end

@@ -36,7 +36,7 @@ class SmartHttpTest < Test::Unit::TestCase
     end
   end
 
-  should "receive information about references" do
+  should "receive references" do
     get "/mycode.git/info/refs" do
       assert_equal 200, response.status
       assert_match "refs/heads/master", response.body
@@ -53,26 +53,30 @@ class SmartHttpTest < Test::Unit::TestCase
     end
   end
 
-  should "receive packs" do
+  should "receive packets" do
     get "/mycode.git/objects/pack/pack-40a8636b62258fffd78ec1e8d254116e72d385a9.idx" do
       assert_equal 200, response.status
       assert_equal "application/x-git-packed-objects-toc", response.content_type
     end
+  end
 
+  should "receive indexed packets" do
     get "/mycode.git/objects/pack/pack-40a8636b62258fffd78ec1e8d254116e72d385a9.pack" do
       assert_equal 200, response.status
       assert_equal "application/x-git-packed-objects", response.content_type
     end
   end
 
-  should "receive information references packed and upload advertisement" do
+  should "upload advertisement" do
     get "/mycode.git/info/refs", :service => "git-upload-pack" do
       assert_equal 200, response.status
       assert_equal "application/x-git-upload-pack-advertisement", response.content_type
       assert_equal "001e# service=git-upload-pack", response.body.split("\n").first
       assert_match 'multi_ack_detailed', response.body
     end
+  end
 
+  should "receive advertisement" do
     get "/mycode.git/info/refs", :service => "git-receive-pack" do
       assert_equal 200, response.status
       assert_equal "application/x-git-receive-pack-advertisement", response.content_type
