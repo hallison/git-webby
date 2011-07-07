@@ -1,3 +1,6 @@
 .*.sw[p-z]
+*.html
+*.log
 *.tmp
+config.ru
 test.*

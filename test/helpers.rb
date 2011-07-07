@@ -25,3 +25,27 @@ module Test::Unit
   end
 end
 
+class MockProcess
+
+  def initialize
+    @counter = 0
+  end
+
+  def write(data)
+  end
+
+  def read(data)
+  end
+
+  def eof?
+    @counter += 1
+    @counter > 1 ? true : false
+  end
+
+end
+
+class IO
+  def self.popen(*args)
+    MockProcess.new
+  end
+end
