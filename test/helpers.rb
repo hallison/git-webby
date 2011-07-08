@@ -19,10 +19,26 @@ module Test::Unit
     end
 
     def fixtures(*args)
-      File.join(FIXTURES, *args)
+      File.join(FIXTURES, *(args.map(&:to_s)))
     end
 
+    def debugger
+    end unless defined? debugger
+
   end
+
+  module Assertions
+
+    def assert_hash_equal(expected, actual, message = nil)
+      messages = {}
+      expected.keys.each do |key|
+        equal = actual[key] == expected[key]
+        messages[key] = build_message(message, "#{expected[key]} expected but was <?>", actual[key])
+        assert_block(messages[key]) { expected[key] == actual[key] }
+      end
+    end
+  end
+
 end
 
 class MockProcess
