@@ -1,6 +1,6 @@
-module Git::Webby #:nodoc:all
+module Git::Webby
 
-  module HttpBackendUtils
+  module HttpBackendUtils #:nodoc:
 
     include RepositoryUtils
 
@@ -47,7 +47,7 @@ module Git::Webby #:nodoc:all
 
     # select_getanyfile feature
     def read_any_file
-      unless settings.config.get_any_file
+      unless settings.get_any_file
         halt 403, "Unsupported service: getanyfile"
       end
     end
@@ -117,11 +117,28 @@ module Git::Webby #:nodoc:all
 
   require "sinatra/base"
 
+  # The Smart HTTP handler server. This is the main Web application which respond to following requests:
+  #
+  # <repo.git>/HEAD           :: HEAD contents
+  # <repo.git>/info/refs      :: Text file that contains references.
+  # <repo.git>/objects/info/* :: Text file that contains all list of packets, alternates or http-alternates.
+  # <repo.git>/objects/*/*    :: Git objects, packets or indexes.
+  # <repo.git>/upload-pack    :: Post an upload packets.
+  # <repo.git>/receive-pack   :: Post a receive packets.
   class HttpBackend < Sinatra::Base
 
     include HttpBackendUtils
 
-    set :config, Config.new
+    set :project_root, File.expand_path("#{File.dirname(__FILE__)}/git")
+    set :git_path,     "/usr/bin/git"
+    set :get_any_file, true
+    set :upload_pack,  true
+    set :receive_pack, false
+
+    def initialize(app = nil, &block) # :nodoc:
+      super(app, &nil)
+      HttpBackend.class_eval(&block) if block_given?
+    end
 
     # implements the get_text_file function
     get "/:repository/HEAD" do |repository|
