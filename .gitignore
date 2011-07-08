@@ -4,3 +4,5 @@
 *.tmp
 config.ru
 test.*
+doc/api/*
+
