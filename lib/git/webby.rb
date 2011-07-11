@@ -1,6 +1,9 @@
 # See <b>Git::Webby</b> for documentation.
 module Git
 
+  # Internal requirements
+  require "git/webby/version"
+
   # The main goal of the <b>Git::Webby</b> is implement the following useful
   # features.
   #
