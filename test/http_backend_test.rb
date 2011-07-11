@@ -23,12 +23,12 @@ class BackendTest < Test::Unit::TestCase
   end
 
   def app
-    @app = Git::Webby::HttpBackend.new do
-      set :project_root, "test/fixtures"
-      set :git_path,     "/usr/bin/git"
-      set :get_any_file, true
-      set :upload_pack,  true
-      set :receive_pack, true
+    @app = Git::Webby::HttpBackend.configure do |server|
+      server.project_root = "test/fixtures"
+      server.git_path     = "/usr/bin/git"
+      server.get_any_file = true
+      server.upload_pack  = true
+      server.receive_pack = true
     end
     @app
   end

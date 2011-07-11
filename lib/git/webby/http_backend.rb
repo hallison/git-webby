@@ -125,6 +125,8 @@ module Git::Webby
   # <repo.git>/objects/*/*    :: Git objects, packets or indexes.
   # <repo.git>/upload-pack    :: Post an upload packets.
   # <repo.git>/receive-pack   :: Post a receive packets.
+  #
+  # See ::configure for more details.
   class HttpBackend < Sinatra::Base
 
     include HttpBackendUtils
@@ -135,9 +137,9 @@ module Git::Webby
     set :upload_pack,  true
     set :receive_pack, false
 
-    def initialize(app = nil, &block) # :nodoc:
-      super(app, &nil)
-      HttpBackend.class_eval(&block) if block_given?
+    def self.configure(*envs, &block)
+      super(*envs, &block)
+      self
     end
 
     # implements the get_text_file function
