@@ -38,6 +38,6 @@ end
 
 desc "Uninstall gem #{spec.name} v#{spec.version}"
 task :uninstall do
-  puts "gem uninstall -l #{spec.name} -v #{spec.version}"
+  sh "gem uninstall -l #{spec.name} -v #{spec.version}"
 end
 

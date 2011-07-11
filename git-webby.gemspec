@@ -12,13 +12,13 @@ Gem::Specification.new do |spec|
   spec.date              = Git::Webby::RELEASE
   spec.test_files        = spec.files.select{ |path| path =~ /^test\/.*/ }
   spec.require_paths     = ["lib"]
+  spec.files             = %x[git ls-files].split.reject do |out|
+    out =~ %r{^\.} || out =~ %r{/^doc/api/}
+  end
   spec.description       = <<-end.gsub /^    /,''
     Git::Webby is a implementation of the several features:
     - Smart HTTP which works like as git-http-backend.
     - Show info pages about the projects.
-  end
-  spec.files = %x[git ls-files].split.reject do |out|
-    out =~ %r{^\.} || out =~ %r{/^doc/api/}
   end
   spec.post_install_message = <<-end.gsub(/^[ ]{4}/,'')
     #{'-'*78}
