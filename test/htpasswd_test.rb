@@ -36,10 +36,11 @@ class HtpasswdTest < Test::Unit::TestCase
   end
 
   should "create or update user" do
-    htpasswd = Git::Webby::Htpasswd.new(fixtures("htpasswd"))
-    htpasswd.create "judas", "hanged"
-    assert htpasswd.include?("judas")
-    assert htpasswd.authenticated?("judas", "hanged")
+    Git::Webby::Htpasswd.new fixtures("htpasswd") do |htpasswd|
+      htpasswd.create "judas", "hanged"
+      assert htpasswd.include?("judas")
+      assert htpasswd.authenticated?("judas", "hanged")
+    end
   end
 
   should "list users" do
@@ -50,9 +51,14 @@ class HtpasswdTest < Test::Unit::TestCase
   end
 
   should "destroy user" do
-    htpasswd = Git::Webby::Htpasswd.new(fixtures("htpasswd"))
-    htpasswd.create "judas", "hanged"
-    assert htpasswd.include?("judas")
+    Git::Webby::Htpasswd.new fixtures("htpasswd") do |htpasswd|
+      htpasswd.create "judas", "hanged"
+      assert htpasswd.include?("judas")
+
+      htpasswd.destroy "judas"
+
+      assert !htpasswd.include?("judas")
+    end
   end
 
 end

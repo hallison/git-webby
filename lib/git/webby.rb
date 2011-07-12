@@ -77,10 +77,8 @@ module Git
 
     end
 
-    class Htpasswd
+    class Htpasswd #:nodoc:
       require "webrick/httpauth/htpasswd"
-
-      attr_reader :users
 
       def initialize(file)
         @handler = WEBrick::HTTPAuth::Htpasswd.new(file)
