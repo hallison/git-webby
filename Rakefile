@@ -12,7 +12,7 @@ end
 desc "Run tests"
 task :test, [:file] do |spec, args|
   Dir["test/#{args.file}*_test.rb"].each do |file|
-    sh "ruby #{file} -v"
+    sh "ruby #{file}"
   end
 end
 
@@ -41,3 +41,4 @@ task :uninstall do
   sh "gem uninstall -l #{spec.name} -v #{spec.version}"
 end
 
+task :default => :test

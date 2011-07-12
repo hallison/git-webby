@@ -77,6 +77,58 @@ module Git
 
     end
 
+    class Htpasswd
+      require "webrick/httpauth/htpasswd"
+
+      attr_reader :users
+
+      def initialize(file)
+        @handler = WEBrick::HTTPAuth::Htpasswd.new(file)
+        yield self if block_given?
+      end
+
+      def find(username)
+        password = @handler.get_passwd(nil, username, false)
+        if block_given?
+          yield [ password, password[0,2] ]
+        else
+          password
+        end
+      end
+
+      def authenticated?(username, password)
+        self.find username do |crypted, salt|
+          crypted == password.crypt(salt)
+        end
+      end
+
+      def create(username, password)
+        @handler.set_passwd(nil, username, password)
+      end
+      alias update create
+
+      def destroy(username)
+        @handler.delete_passwd(nil, username)
+      end
+
+      def include?(username)
+        users.include? username
+      end
+
+      def size
+        users.size
+      end
+
+      def write!
+        @handler.flush
+      end
+
+      private
+
+      def users
+        @handler.each{|username, password| username }
+      end
+    end
 
     # Applications
     autoload :HttpBackend, "git/webby/http_backend"
