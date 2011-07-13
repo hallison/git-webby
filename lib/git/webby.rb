@@ -77,6 +77,15 @@ module Git
 
     end
 
+    class Htgroup #:nodoc:
+      require "webrick/httpauth/htgroup"
+
+      def initialize(file)
+        @handler = WEBrick::HTTPAuth::Htgroup.new(file)
+        yield self if block_given?
+      end
+    end
+
     class Htpasswd #:nodoc:
       require "webrick/httpauth/htpasswd"
 
@@ -88,7 +97,7 @@ module Git
       def find(username)
         password = @handler.get_passwd(nil, username, false)
         if block_given?
-          yield [ password, password[0,2] ]
+          yield password ? [password, password[0,2]] : [nil, nil]
         else
           password
         end
@@ -96,7 +105,7 @@ module Git
 
       def authenticated?(username, password)
         self.find username do |crypted, salt|
-          crypted == password.crypt(salt)
+          crypted && salt && crypted == password.crypt(salt)
         end
       end
 

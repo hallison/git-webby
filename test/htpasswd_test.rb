@@ -11,17 +11,17 @@ class HtpasswdTest < Test::Unit::TestCase
       "luke"    => "1y687odVzuFJs",
       "john"    => "BInD5.JEyr5Ng"
     }
-    @committers = Git::Webby::Htpasswd.new(fixtures("committers.htpasswd"))
+    @htpasswd = Git::Webby::Htpasswd.new(fixtures("htpasswd"))
   end
 
   def teardown
-    File.delete fixtures("htpasswd") if File.exist? fixtures("htpasswd")
+    File.delete fixtures("htpasswd.tmp") if File.exist? fixtures("htpasswd.tmp")
   end
 
   should "find user" do
     @passwords.each do |username, password|
-      assert_equal password, @committers.find(username)
-      @committers.find username do |pass, salt|
+      assert_equal password, @htpasswd.find(username)
+      @htpasswd.find username do |pass, salt|
         assert_equal password, pass
         assert_equal password[0,2], salt
       end
@@ -30,13 +30,13 @@ class HtpasswdTest < Test::Unit::TestCase
 
   should "check authentication of the user" do
     @passwords.keys.each do |user|
-      assert !@committers.authenticated?(user, "invalid") 
-      assert  @committers.authenticated?(user, "s3kr3t") 
+      assert !@htpasswd.authenticated?(user, "invalid")
+      assert  @htpasswd.authenticated?(user, "s3kr3t")
     end
   end
 
   should "create or update user" do
-    Git::Webby::Htpasswd.new fixtures("htpasswd") do |htpasswd|
+    Git::Webby::Htpasswd.new fixtures("htpasswd.tmp") do |htpasswd|
       htpasswd.create "judas", "hanged"
       assert htpasswd.include?("judas")
       assert htpasswd.authenticated?("judas", "hanged")
@@ -44,14 +44,14 @@ class HtpasswdTest < Test::Unit::TestCase
   end
 
   should "list users" do
-    assert_equal 4, @committers.size
+    assert_equal 4, @htpasswd.size
     @passwords.keys.each do |user|
-      assert @committers.include?(user)
+      assert @htpasswd.include?(user)
     end
   end
 
   should "destroy user" do
-    Git::Webby::Htpasswd.new fixtures("htpasswd") do |htpasswd|
+    Git::Webby::Htpasswd.new fixtures("htpasswd.tmp") do |htpasswd|
       htpasswd.create "judas", "hanged"
       assert htpasswd.include?("judas")
 
@@ -59,6 +59,10 @@ class HtpasswdTest < Test::Unit::TestCase
 
       assert !htpasswd.include?("judas")
     end
+  end
+
+  should "check invalid user" do
+    assert !@htpasswd.authenticated?("nobody", "empty")
   end
 
 end

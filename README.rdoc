@@ -21,9 +21,13 @@ Configure your rackup file (<tt>config.ru</tt>) using following instructions:
 
   require "git/webby"
 
-  http_backend = Git::Webby::HttpBackend.new do
-    set :project_root, "/var/git"
-    set :git_path,     "/usr/local/bin/git"
+  Git::Webby::HttpBackend.configure do |server|
+    server.project_root = "test/fixtures"
+    server.git_path     = "/usr/bin/git"
+    server.get_any_file = true
+    server.upload_pack  = true
+    server.receive_pack = false
+    server.authenticate = true
   end
 
 == BUGS
