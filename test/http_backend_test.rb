@@ -1,11 +1,10 @@
 require "test/unit"
 require "test/helpers"
-require "rubygems"
 require "rack"
 require "rack/test"
-require "lib/git/webby"
+require "git/webby"
 
-class BackendTest < Test::Unit::TestCase
+class HttpBackendTest < Test::Unit::TestCase
   include Rack::Test::Methods
 
   def setup
@@ -29,6 +28,7 @@ class BackendTest < Test::Unit::TestCase
       server.get_any_file = true
       server.upload_pack  = true
       server.receive_pack = true
+      server.authenticate = false
     end
     @app
   end

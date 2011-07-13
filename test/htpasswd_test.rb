@@ -1,6 +1,6 @@
 require "test/unit"
 require "test/helpers"
-require "lib/git/webby"
+require "git/webby"
 
 class HtpasswdTest < Test::Unit::TestCase
 

@@ -4,8 +4,12 @@ module Git::Webby
 
     include RepositoryUtils
 
+    def repository
+      params[:repository]
+    end
+
     def content_type_for_git(name, *suffixes)
-      content_type("application/x-git-#{name}-#{suffixes.compact.join('-')}")
+      content_type("application/x-git-#{name}-#{suffixes.compact.join("-")}")
     end
 
     def service_request?
@@ -16,13 +20,13 @@ module Git::Webby
     def service
       @service = params[:service]
       return false if @service.nil?
-      return false if @service[0, 4] != 'git-'
-      @service = @service.gsub('git-', '')
+      return false if @service[0, 4] != "git-"
+      @service = @service.gsub("git-", "")
     end
 
     # pkt_write feature
     def packet_write(line)
-      (line.size + 4).to_s(base=16).rjust(4, '0') + line
+      (line.size + 4).to_s(base=16).rjust(4, "0") + line
     end
 
     # pkt_flush feature
@@ -115,6 +119,55 @@ module Git::Webby
 
   end # HttpBackendUtils
 
+  module HttpBackendAuthentication #:nodoc:
+
+    def htpasswd
+      @htpasswd ||= Htpasswd.new(project_path_to("htpasswd"))
+    end
+
+    def authentication
+      @authentication ||= Rack::Auth::Basic::Request.new request.env
+    end
+
+    def authenticated?
+      request.env["REMOTE_USER"] && request.env["git.webby.authenticated"]
+    end
+
+    def authenticate(username, password)
+      checked   = [ username, password ] == authentication.credentials
+      validated = authentication.provided? && authentication.basic?
+      granted   = htpasswd.authenticated? username, password
+      if checked and validated and granted
+        request.env["git.webby.authenticated"] = true
+        request.env["REMOTE_USER"] = authentication.username
+      else
+        nil
+      end
+    end
+
+    def unauthorized!(realm = "Git HTTP Access")
+      headers "WWW-Authenticate" => %(Basic realm="#{realm}")
+      throw :halt, [ 401, "Authorization Required" ]
+    end
+
+    def bad_request!
+      throw :halt, [ 400, "Bad Request" ]
+    end
+
+    def authenticate!
+      return if authenticated?
+      unauthorized! unless authentication.provided?
+      bad_request!  unless authentication.basic?
+      unauthorized! unless authenticate(*authentication.credentials)
+      request.env["REMOTE_USER"] = authentication.username
+    end
+
+    def access_granted?(username, password)
+      authenticated? || authenticate(username, password)
+    end
+
+  end
+
   require "sinatra/base"
 
   # The Smart HTTP handler server. This is the main Web application which respond to following requests:
@@ -129,17 +182,22 @@ module Git::Webby
   # See ::configure for more details.
   class HttpBackend < Sinatra::Base
 
-    include HttpBackendUtils
+    helpers HttpBackendUtils
 
     set :project_root, File.expand_path("#{File.dirname(__FILE__)}/git")
     set :git_path,     "/usr/bin/git"
     set :get_any_file, true
     set :upload_pack,  true
     set :receive_pack, false
+    set :authenticate, false
 
     def self.configure(*envs, &block)
       super(*envs, &block)
       self
+    end
+
+    before do
+      authenticate! if settings.authenticate
     end
 
     # implements the get_text_file function
@@ -179,6 +237,10 @@ module Git::Webby
     post "/:repository/:service" do |repository, rpc|
       run_process repository, service
     end
+
+  private
+
+    helpers HttpBackendAuthentication
 
   end # HttpBackend
 
