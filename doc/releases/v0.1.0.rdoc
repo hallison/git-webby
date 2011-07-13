@@ -1,0 +1,11 @@
+== Git-Webby v0.1.0
+
+Implementation of the basic features:
+
+- Smart-HTTP implementation.
+- Authentication using +htpasswd+ features (only crypt algorithm).
+- Basic configuration in Rackup file.
+
+This is a beta version. For more informations about this release,
+please visit <http://github.com/codigorama/git-webby>.
+

@@ -23,7 +23,7 @@ class HttpBackendTest < Test::Unit::TestCase
 
   def app
     @app = Git::Webby::HttpBackend.configure do |server|
-      server.project_root = "test/fixtures"
+      server.project_root = fixtures
       server.git_path     = "/usr/bin/git"
       server.get_any_file = true
       server.upload_pack  = true

@@ -3,7 +3,7 @@
 module Git::Webby #:nodoc:
 
   VERSION   = "0.1.0"
-  RELEASE   = "2011-07-10"
+  RELEASE   = "2011-07-13"
   TIMESTAMP = "2011-07-05 12:32:36 -04:00"
 
   def self.info

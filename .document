@@ -1,3 +1,4 @@
 README.rdoc
+doc/releases/*
 lib/git/*
 lib/git/webby/*

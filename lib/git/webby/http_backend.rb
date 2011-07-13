@@ -145,7 +145,7 @@ module Git::Webby
       end
     end
 
-    def unauthorized!(realm = "Git HTTP Access")
+    def unauthorized!(realm = Git::Webby::info)
       headers "WWW-Authenticate" => %(Basic realm="#{realm}")
       throw :halt, [ 401, "Authorization Required" ]
     end
