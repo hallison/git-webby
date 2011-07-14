@@ -1,11 +1,13 @@
 module Git::Webby
 
-  module HttpBackendUtils #:nodoc:
+  module HttpBackendHelpers #:nodoc:
 
-    include RepositoryUtils
+    def git
+      @git ||= ProjectHandler.new(settings.project_root, settings.git_path)
+    end
 
     def repository
-      params[:repository]
+      @repository ||= Repository.new(git.repository_path(params[:repository]))
     end
 
     def content_type_for_git(name, *suffixes)
@@ -57,54 +59,54 @@ module Git::Webby
     end
 
     # get_text_file feature
-    def read_text_file(repository, *file)
+    def read_text_file(*file)
       read_any_file
       header_nocache
       content_type "text/plain"
-      read_file(repository, *file)
+      repository.read_file(*file)
     end
 
     # get_loose_object feature
-    def send_loose_object(repository, hash_prefix, hash_suffix)
+    def send_loose_object(prefix, suffix)
       read_any_file
       header_cache_forever
       content_type_for_git :loose, :object
-      send_file(path_to(repository, "objects", hash_prefix, hash_suffix))
+      send_file(repository.loose_object_path(prefix, suffix))
     end
 
     # get_pack_file and get_idx_file
-    def send_pack_idx_file(repository, pack, idx = false)
+    def send_pack_idx_file(pack, idx = false)
       read_any_file
       header_cache_forever
       content_type_for_git :packed, :objects, (idx ? :toc : nil)
-      send_file(path_to(repository, "objects", "pack", pack))
+      send_file(repository.pack_idx_path(pack))
     end
 
-    def send_info_packs(repository)
+    def send_info_packs
       read_any_file
       header_nocache
       content_type "text/plain; charset=utf-8"
-      send_file(path_to(repository, "objects", "info", "packs"))
+      send_file(repository.info_packs_path)
     end
 
     # run_service feature
-    def run_advertisement(repository, service)
+    def run_advertisement(service)
       header_nocache
       content_type_for_git service, :advertisement
-      chdir repository do
+      repository.chdir do
         response.body  = ""
         response.body += packet_write("# service=git-#{service}\n")
         response.body += packet_flush
-        response.body += git_run(service, "--stateless-rpc --advertise-refs .")
+        response.body += git.run(service, "--stateless-rpc --advertise-refs .")
         response.finish
       end
     end
 
-    def run_process(repository, service)
+    def run_process(service)
       content_type_for_git service, :result
       input   = request.body.read
-      command = git_cli(service, "--stateless-rpc .")
-      chdir repository do
+      command = git.cli(service, "--stateless-rpc .")
+      repository.chdir do
         # This source has extracted from Grack written by Scott Chacon.
         IO.popen(command, File::RDWR) do |pipe|
           pipe.write(input)
@@ -117,12 +119,12 @@ module Git::Webby
       end
     end
 
-  end # HttpBackendUtils
+  end # HttpBackendHelpers
 
   module HttpBackendAuthentication #:nodoc:
 
     def htpasswd
-      @htpasswd ||= Htpasswd.new(project_path_to("htpasswd"))
+      @htpasswd ||= Htpasswd.new(git.path_to("htpasswd"))
     end
 
     def authentication
@@ -168,8 +170,6 @@ module Git::Webby
 
   end
 
-  require "sinatra/base"
-
   # The Smart HTTP handler server. This is the main Web application which respond to following requests:
   #
   # <repo.git>/HEAD           :: HEAD contents
@@ -180,9 +180,9 @@ module Git::Webby
   # <repo.git>/receive-pack   :: Post a receive packets.
   #
   # See ::configure for more details.
-  class HttpBackend < Sinatra::Base
+  class HttpBackend < Controller
 
-    helpers HttpBackendUtils
+    helpers HttpBackendHelpers
 
     set :project_root, File.expand_path("#{File.dirname(__FILE__)}/git")
     set :git_path,     "/usr/bin/git"
@@ -191,51 +191,49 @@ module Git::Webby
     set :receive_pack, false
     set :authenticate, false
 
-    def self.configure(*envs, &block)
-      super(*envs, &block)
-      self
-    end
-
     before do
       authenticate! if settings.authenticate
     end
 
     # implements the get_text_file function
     get "/:repository/HEAD" do |repository|
-      read_text_file(repository, "HEAD")
+      read_text_file("HEAD")
     end
 
     # implements the get_info_refs function
     get "/:repository/info/refs" do |repository|
       if service_request? # by URL query parameters
-        run_advertisement repository, service
+        run_advertisement service
       else
-        read_text_file(repository, :info, :refs)
+        read_text_file(:info, :refs)
       end
     end
 
     # implements the get_text_file and get_info_packs functions
     get %r{/(.*?)/objects/info/(packs|alternates|http-alternates)$} do |repository, file|
+      params[:repository] = repository
       if file == "packs"
-        send_info_packs(repository)
+        send_info_packs
       else
-        read_text_file(repository, :objects, :info, file)
+        read_text_file(:objects, :info, file)
       end
     end
 
     # implements the get_loose_object function
     get %r{/(.*?)/objects/([0-9a-f]{2})/([0-9a-f]{38})$} do |repository, prefix, suffix|
-      send_loose_object(repository, prefix, suffix)
+      params[:repository] = repository
+      send_loose_object(prefix, suffix)
     end
 
     # implements the get_pack_file and get_idx_file functions
     get %r{/(.*?)/objects/pack/(pack-[0-9a-f]{40}.(pack|idx))$} do |repository, pack, ext|
-      send_pack_idx_file(repository, pack, ext == "idx")
+      params[:repository] = repository
+      send_pack_idx_file(pack, ext == "idx")
     end
 
     # implements the service_rpc function
     post "/:repository/:service" do |repository, rpc|
-      run_process repository, service
+      run_process service
     end
 
   private

@@ -1,6 +1,9 @@
 # See <b>Git::Webby</b> for documentation.
 module Git
 
+  # 3rd part requirements
+  require "sinatra/base"
+
   # Internal requirements
   require "git/webby/version"
 
@@ -12,37 +15,80 @@ module Git
   # - API to get information about repository.
   module Webby
 
-    module RepositoryUtils # :nodoc:
-      def project_path_to(*args)
-        File.join(settings.project_root.to_s, *(args.map(&:to_s)))
+    class ProjectHandler #:nodoc:
+
+      # Path to git comamnd
+      attr_reader :git_path
+
+      attr_reader :project_root
+
+      def initialize(project_root, git_path = "/usr/bin/git", options = {})
+        @config       = {
+          :get_any_file => true,
+          :upload_pack  => true,
+          :receive_pack => false
+        }.update(options)
+        @git_path     = File.expand_path(git_path)
+        @project_root = File.expand_path(project_root)
+        check_path @git_path
+        check_path @project_root
       end
 
-      def git_dir(name)
-        unless name =~ /\w\.git/ # not bare directory
-          File.join(name, ".git")
-        else
-          name
-        end
+      def cli(command, *args)
+        %Q[#{@git_path} #{args.unshift(command.to_s.gsub("_","-")).compact.join(" ")}]
       end
 
-      def path_to(name, *args)
-        project_path_to(git_dir(name), *args)
+      def run(command, *args)
+        %x[#{cli command, *args}]
       end
 
-      def read_file(dirname, *file)
-        File.read(path_to(dirname, *file))
+      def repository_path(name)
+        bare = name =~ /\w\.git/ ? name : %W[#{name} .git]
+        check_path(path_to(*bare))
       end
 
-      def chdir(dirname, &block)
-        Dir.chdir(path_to(dirname), &block)
+      def path_to(*args)
+        File.join(@project_root, *(args.map(&:to_s)))
       end
 
-      def git_cli(command, *args)
-        %Q[#{settings.git_path} #{args.unshift(command.to_s.gsub("_","-")).compact.join(" ")}]
+      private
+
+      def check_path(path)
+        path && !path.empty? && File.ftype(path) && path
       end
 
-      def git_run(command, *args)
-        %x[#{git_cli command, *args}]
+    end
+
+    class Repository #:nodoc:
+
+      attr_reader :path
+
+      def initialize(path)
+        @path = path
+      end
+
+      def path_to(*file)
+        File.join(@path, *(file.map(&:to_s)))
+      end
+
+      def chdir(&block)
+        Dir.chdir(@path, &block)
+      end
+
+      def read_file(*file)
+        File.read(path_to(*file))
+      end
+
+      def loose_object_path(*hash)
+        path_to(:objects, *hash)
+      end
+
+      def pack_idx_path(pack)
+        path_to(:objects, :pack, pack)
+      end
+
+      def info_packs_path
+        path_to(:objects, :info, :packs)
       end
 
     end
@@ -78,18 +124,18 @@ module Git
     end
 
     class Htgroup #:nodoc:
-      require "webrick/httpauth/htgroup"
 
       def initialize(file)
+        require "webrick/httpauth/htgroup"
         @handler = WEBrick::HTTPAuth::Htgroup.new(file)
         yield self if block_given?
       end
     end
 
     class Htpasswd #:nodoc:
-      require "webrick/httpauth/htpasswd"
 
       def initialize(file)
+        require "webrick/httpauth/htpasswd"
         @handler = WEBrick::HTTPAuth::Htpasswd.new(file)
         yield self if block_given?
       end
@@ -134,6 +180,13 @@ module Git
 
       def users
         @handler.each{|username, password| username }
+      end
+    end
+
+    class Controller < Sinatra::Base
+      def self.configure(*envs, &block)
+        super(*envs, &block)
+        self
       end
     end
 

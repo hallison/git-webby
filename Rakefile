@@ -27,7 +27,7 @@ task :build => "#{spec.name}.gemspec" do
 end
 
 desc "Release #{spec.file_name}"
-task :release do
+task :release => :build do
   sh "gem push #{spec.file_name}"
 end
 
@@ -38,7 +38,7 @@ end
 
 desc "Uninstall gem #{spec.name} v#{spec.version}"
 task :uninstall do
-  sh "gem uninstall -l #{spec.name} -v #{spec.version}"
+  sh "gem uninstall #{spec.name} -v #{spec.version}"
 end
 
 task :default => :test
