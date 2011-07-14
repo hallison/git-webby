@@ -183,7 +183,24 @@ module Git
       end
     end
 
+    module GitHelpers
+
+      def git
+        @git ||= ProjectHandler.new(settings.project_root, settings.git_path)
+      end
+
+      def content_type_for_git(name, *suffixes)
+        content_type("application/x-git-#{name}-#{suffixes.compact.join("-")}")
+      end
+
+    end
+
     class Controller < Sinatra::Base
+
+      set :project_root, "/home/git"
+      set :git_path,     "/usr/bin/git"
+      set :authenticate, false
+
       def self.configure(*envs, &block)
         super(*envs, &block)
         self

@@ -2,16 +2,8 @@ module Git::Webby
 
   module HttpBackendHelpers #:nodoc:
 
-    def git
-      @git ||= ProjectHandler.new(settings.project_root, settings.git_path)
-    end
-
     def repository
       @repository ||= Repository.new(git.repository_path(params[:repository]))
-    end
-
-    def content_type_for_git(name, *suffixes)
-      content_type("application/x-git-#{name}-#{suffixes.compact.join("-")}")
     end
 
     def service_request?
@@ -181,6 +173,8 @@ module Git::Webby
   #
   # See ::configure for more details.
   class HttpBackend < Controller
+
+    helpers GitHelpers
 
     helpers HttpBackendHelpers
 
