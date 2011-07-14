@@ -178,12 +178,9 @@ module Git::Webby
 
     helpers HttpBackendHelpers
 
-    set :project_root, File.expand_path("#{File.dirname(__FILE__)}/git")
-    set :git_path,     "/usr/bin/git"
     set :get_any_file, true
     set :upload_pack,  true
     set :receive_pack, false
-    set :authenticate, false
 
     before do
       authenticate! if settings.authenticate
