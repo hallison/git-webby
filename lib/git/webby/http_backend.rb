@@ -98,7 +98,7 @@ module Git::Webby
     def run_process(service)
       content_type_for_git service, :result
       input   = request.body.read
-      command = repository.cli(service, "--stateless-rpc .")
+      command = repository.cli(service, "--stateless-rpc #{git.repository}")
       # This source has extracted from Grack written by Scott Chacon.
       IO.popen(command, File::RDWR) do |pipe|
         pipe.write(input)
