@@ -18,61 +18,39 @@ module Git
     class ProjectHandler #:nodoc:
 
       # Path to git comamnd
-      attr_reader :git_path
+      attr_reader :path
 
       attr_reader :project_root
 
-      def initialize(project_root, git_path = "/usr/bin/git", options = {})
+      attr_reader :repository
+
+      def initialize(project_root, path = "/usr/bin/git", options = {})
         @config       = {
           :get_any_file => true,
           :upload_pack  => true,
           :receive_pack => false
         }.update(options)
-        @git_path     = File.expand_path(git_path)
+        @repository   = nil
+        @path         = File.expand_path(path)
         @project_root = File.expand_path(project_root)
-        check_path @git_path
+        check_path @path
         check_path @project_root
       end
 
+      def path_to(*args)
+        File.join(@repository || @project_root, *(args.compact.map(&:to_s)))
+      end
+
+      def repository=(name)
+        @repository = check_path(path_to(name))
+      end
+
       def cli(command, *args)
-        %Q[#{@git_path} #{args.unshift(command.to_s.gsub("_","-")).compact.join(" ")}]
+        %Q[#{@path} #{args.unshift(command.to_s.gsub("_","-")).compact.join(" ")}]
       end
 
       def run(command, *args)
-        %x[#{cli command, *args}]
-      end
-
-      def repository_path(name)
-        bare = name =~ /\w\.git/ ? name : %W[#{name} .git]
-        check_path(path_to(*bare))
-      end
-
-      def path_to(*args)
-        File.join(@project_root, *(args.map(&:to_s)))
-      end
-
-      private
-
-      def check_path(path)
-        path && !path.empty? && File.ftype(path) && path
-      end
-
-    end
-
-    class Repository #:nodoc:
-
-      attr_reader :path
-
-      def initialize(path)
-        @path = path
-      end
-
-      def path_to(*file)
-        File.join(@path, *(file.map(&:to_s)))
-      end
-
-      def chdir(&block)
-        Dir.chdir(@path, &block)
+        chdir{ %x[#{cli command, *args}] }
       end
 
       def read_file(*file)
@@ -89,6 +67,21 @@ module Git
 
       def info_packs_path
         path_to(:objects, :info, :packs)
+      end
+
+      private
+
+      def repository_path(name)
+        bare = name =~ /\w\.git/ ? name : %W[#{name} .git]
+        check_path(path_to(*bare))
+      end
+
+      def check_path(path)
+        path && !path.empty? && File.ftype(path) && path
+      end
+
+      def chdir(&block)
+        Dir.chdir(@repository || @project_root, &block)
       end
 
     end

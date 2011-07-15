@@ -2,8 +2,11 @@ module Git::Webby
 
   module HttpBackendHelpers #:nodoc:
 
+    include GitHelpers
+
     def repository
-      @repository ||= Repository.new(git.repository_path(params[:repository]))
+      git.repository ||= (params[:repository] || params[:captures].first)
+      git
     end
 
     def service_request?
@@ -85,30 +88,26 @@ module Git::Webby
     def run_advertisement(service)
       header_nocache
       content_type_for_git service, :advertisement
-      repository.chdir do
-        response.body  = ""
-        response.body += packet_write("# service=git-#{service}\n")
-        response.body += packet_flush
-        response.body += git.run(service, "--stateless-rpc --advertise-refs .")
-        response.finish
-      end
+      response.body  = ""
+      response.body += packet_write("# service=git-#{service}\n")
+      response.body += packet_flush
+      response.body += repository.run(service, "--stateless-rpc --advertise-refs .")
+      response.finish
     end
 
     def run_process(service)
       content_type_for_git service, :result
       input   = request.body.read
-      command = git.cli(service, "--stateless-rpc .")
-      repository.chdir do
-        # This source has extracted from Grack written by Scott Chacon.
-        IO.popen(command, File::RDWR) do |pipe|
-          pipe.write(input)
-          while !pipe.eof?
-            block = pipe.read(8192) # 8M at a time
-            response.write block    # steam it to the client
-          end
-        end # IO
-        response.finish
-      end
+      command = repository.cli(service, "--stateless-rpc .")
+      # This source has extracted from Grack written by Scott Chacon.
+      IO.popen(command, File::RDWR) do |pipe|
+        pipe.write(input)
+        while !pipe.eof?
+          block = pipe.read(8192) # 8M at a time
+          response.write block    # steam it to the client
+        end
+      end # IO
+      response.finish
     end
 
   end # HttpBackendHelpers
@@ -174,8 +173,6 @@ module Git::Webby
   # See ::configure for more details.
   class HttpBackend < Controller
 
-    helpers GitHelpers
-
     helpers HttpBackendHelpers
 
     set :get_any_file, true
@@ -187,12 +184,12 @@ module Git::Webby
     end
 
     # implements the get_text_file function
-    get "/:repository/HEAD" do |repository|
+    get "/:repository/HEAD" do
       read_text_file("HEAD")
     end
 
     # implements the get_info_refs function
-    get "/:repository/info/refs" do |repository|
+    get "/:repository/info/refs" do
       if service_request? # by URL query parameters
         run_advertisement service
       else
@@ -202,7 +199,6 @@ module Git::Webby
 
     # implements the get_text_file and get_info_packs functions
     get %r{/(.*?)/objects/info/(packs|alternates|http-alternates)$} do |repository, file|
-      params[:repository] = repository
       if file == "packs"
         send_info_packs
       else
@@ -212,18 +208,16 @@ module Git::Webby
 
     # implements the get_loose_object function
     get %r{/(.*?)/objects/([0-9a-f]{2})/([0-9a-f]{38})$} do |repository, prefix, suffix|
-      params[:repository] = repository
       send_loose_object(prefix, suffix)
     end
 
     # implements the get_pack_file and get_idx_file functions
     get %r{/(.*?)/objects/pack/(pack-[0-9a-f]{40}.(pack|idx))$} do |repository, pack, ext|
-      params[:repository] = repository
       send_pack_idx_file(pack, ext == "idx")
     end
 
     # implements the service_rpc function
-    post "/:repository/:service" do |repository, rpc|
+    post "/:repository/:service" do
       run_process service
     end
 
