@@ -4,11 +4,6 @@ module Git::Webby
 
     include GitHelpers
 
-    def repository
-      git.repository ||= (params[:repository] || params[:captures].first)
-      git
-    end
-
     def service_request?
       not params[:service].nil?
     end

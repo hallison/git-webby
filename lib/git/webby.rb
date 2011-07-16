@@ -69,7 +69,6 @@ module Git
         path_to(:objects, :info, :packs)
       end
 
-      # TODO: remove recursive command execution
       def tree(ref = "HEAD", path = "")
         list = run("ls-tree --abbrev=6 --full-tree --long #{ref}:#{path}")
         if list
@@ -83,12 +82,6 @@ module Git
               :fsize => fsize($7, 2),
               :fname => $8
             }
-            if tree.last[:otype] == "tree" && dir = tree.last
-              dir[:fname] = "#{path}/#{dir[:fname]}" unless path.empty?
-              dir[:objects] = tree("HEAD", dir[:fname])
-            else
-              nil
-            end
           end
           tree
         else
@@ -227,6 +220,11 @@ module Git
         @git ||= ProjectHandler.new(settings.project_root, settings.git_path)
       end
 
+      def repository
+        git.repository ||= (params[:repository] || params[:captures].first)
+        git
+      end
+
       def content_type_for_git(name, *suffixes)
         content_type("application/x-git-#{name}-#{suffixes.compact.join("-")}")
       end
@@ -247,6 +245,7 @@ module Git
 
     # Applications
     autoload :HttpBackend, "git/webby/http_backend"
+    autoload :Viewer,      "git/webby/viewer"
 
   end
 

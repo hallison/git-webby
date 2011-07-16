@@ -45,7 +45,7 @@ class ProjectHandlerTest < Test::Unit::TestCase
     assert_equal 3, @git.tree.size
     assert_equal "README.txt", @git.tree[1][:fname]
     assert_equal "lib", @git.tree.last[:fname]
-    assert_equal "mycode.rb", @git.tree.last[:objects].first[:fname]
+    assert_equal "mycode.rb", @git.tree("HEAD", "lib").first[:fname]
   end
 
 end
