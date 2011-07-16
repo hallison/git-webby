@@ -69,6 +69,33 @@ module Git
         path_to(:objects, :info, :packs)
       end
 
+      # TODO: remove recursive command execution
+      def tree(ref = "HEAD", path = "")
+        list = run("ls-tree --abbrev=6 --full-tree --long #{ref}:#{path}")
+        if list
+          tree = []
+          list.scan %r{^(\d{3})(\d)(\d)(\d) (\w.*?) (.{6})[ \t]{0,}(.*?)\t(.*?)\n}m do
+            tree << {
+              :ftype => ftype[$1],
+              :fperm => "#{fperm[$2.to_i]}#{fperm[$3.to_i]}#{fperm[$4.to_i]}",
+              :otype => $5,
+              :ohash => $6,
+              :fsize => fsize($7, 2),
+              :fname => $8
+            }
+            if tree.last[:otype] == "tree" && dir = tree.last
+              dir[:fname] = "#{path}/#{dir[:fname]}" unless path.empty?
+              dir[:objects] = tree("HEAD", dir[:fname])
+            else
+              nil
+            end
+          end
+          tree
+        else
+          nil
+        end
+      end
+
       private
 
       def repository_path(name)
@@ -82,6 +109,24 @@ module Git
 
       def chdir(&block)
         Dir.chdir(@repository || @project_root, &block)
+      end
+
+      def ftype
+        { "120" => "l", "100" => "-", "040" => "d" }
+      end
+
+      def fperm
+        [ "---", "--x", "-w-", "-wx", "r--", "r-x", "rw-", "rwx"  ]
+      end
+
+      def fsize(str, scale = 1)
+        units = [ :b, :kb, :mb, :gb, :tb ]
+        value = str.to_f
+        size  = 0.0
+        units.each_index do |i|
+          size = value / 1024**i
+          return [format("%.#{scale}f", size).to_f, units[i].to_s.upcase] if size <= 10
+        end
       end
 
     end

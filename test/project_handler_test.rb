@@ -41,4 +41,11 @@ class ProjectHandlerTest < Test::Unit::TestCase
     end
   end
 
+  should "list tree files" do
+    assert_equal 3, @git.tree.size
+    assert_equal "README.txt", @git.tree[1][:fname]
+    assert_equal "lib", @git.tree.last[:fname]
+    assert_equal "mycode.rb", @git.tree.last[:objects].first[:fname]
+  end
+
 end
