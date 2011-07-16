@@ -1,0 +1,24 @@
+== Git-Webby v0.2.0
+
+Implementation of viewer for browsing of source code:
+
+- Fixes in tasks.
+- Adding of classes for handle repositories.
+- Improvements in all helpers.
+- Base controller for shared settings
+- The project handler has been improved to find a repository and run the
+  command line for get files and informations.
+- The HTTP Backend class has been updated for use the new changes in project
+  handler.
+- Fixes in RPC service to POST git-upload-pack
+  - The repository was passed as current directory instead of the full path.
+- Adding of tree in project handler
+- Adding of viewer for browsing of source code
+  - The recursive tree has been removed for improve performance.
+  - Small improvements in helpers and tests.
+
+This is a beta version. For more informations about this release,
+please visit <http://github.com/codigorama/git-webby>.
+
+
+
