@@ -1,7 +1,10 @@
-:http_backend:
-  :project_root : /var/git
-  :git_path     : /usr/bin/git
-  :get_any_file : true
-  :upload_pack  : true
-  :receive_pack : false
+repository:
+  project_root: /var/git
+  git_path    : /usr/bin/git
+  authenticate: true
+
+http_backend:
+  get_any_file: true
+  upload_pack : true
+  receive_pack: false
 

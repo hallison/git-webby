@@ -5,26 +5,37 @@ require "git/webby"
 class ConfigTest < Test::Unit::TestCase
 
   def setup
-    @http_backend = {
-      :project_root => "/var/git",
-      :git_path     => "/usr/bin/git",
-      :get_any_file => true,
-      :upload_pack  => true,
-      :receive_pack => false
+    @attributes = {
+      :repository => {
+        :project_root => "/var/git",
+        :git_path     => "/usr/bin/git",
+        :authenticate => true
+      },
+      :http_backend => {
+        :get_any_file => true,
+        :upload_pack  => true,
+        :receive_pack => false
+      }
     }
-    @config = Git::Webby::Config.new do |config|
-      config.http_backend = @http_backend
+    @config = Git::Webby::Config.new @attributes
+  end
+
+  should "config by hash" do
+    @attributes.keys.each do |method|
+      @attributes[method].each do |key, value|
+        assert_equal value, @config.send(method).send(key)
+      end
     end
   end
 
-  should "config for HTTP backend" do
-    assert_hash_equal @http_backend, @config.http_backend
-  end
-
   should "load from YAML file" do
+    yaml   = YAML.load_file(fixtures("config.yml"))
     config = Git::Webby::Config.load_file(fixtures("config.yml"))
-    assert_not_nil config.http_backend
-    assert_hash_equal @http_backend, config.http_backend
+    yaml.keys.each do |method|
+      yaml[method].each do |key, value|
+        assert_equal value, @config.send(method).send(key)
+      end
+    end
   end
 
 end

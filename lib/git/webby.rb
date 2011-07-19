@@ -1,11 +1,16 @@
+# Standard requirements
+require "yaml"
+
+# 3rd part requirements
+require "sinatra/base"
+require "json"
+
+# Internal requirements
+require "git/webby/extensions"
+require "git/webby/version"
+
 # See <b>Git::Webby</b> for documentation.
 module Git
-
-  # 3rd part requirements
-  require "sinatra/base"
-
-  # Internal requirements
-  require "git/webby/version"
 
   # The main goal of the <b>Git::Webby</b> is implement the following useful
   # features.
@@ -137,12 +142,26 @@ module Git
     # *receive_pack*  :: Like <tt>http.receivepack</tt> configuration.
     class Config
 
-      # Configuration for HTTP Backend variables
-      attr_accessor :http_backend
+      DEFAULTS = {
+        :repository => {
+          :project_root => "/home/git",
+          :git_path     => "/usr/bin/git",
+          :authenticate => false
+        },
+        :http_backend => {
+          :get_any_file => true,
+          :upload_pack  => true,
+          :receive_pack => false
+        }
+      }
+
+      DEFAULTS.keys.map do |attribute|
+        attr_reader attribute
+      end
 
       def initialize(attributes = {}) # :yields: config
-        attributes.each do |key, value|
-          self.send("#{key}=", value) if self.respond_to? key
+        DEFAULTS.update(attributes.symbolize_keys).map do |attrib, values|
+          self.instance_variable_set("@#{attrib}", values.to_struct)
         end
         yield self if block_given?
       end
