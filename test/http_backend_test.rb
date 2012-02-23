@@ -51,13 +51,13 @@ class HttpBackendTest < Test::Unit::TestCase
 
   should "get info alternates" do
     get "/mycode.git/objects/info/alternates" do
-      assert_equal 500, response.status # fixtures without alternates
+      assert_equal 200, response.status
     end
   end
 
   should "get info http alternates" do
     get "/mycode.git/objects/info/http-alternates" do
-      assert_equal 500, response.status # fixtures without http-alternates
+      assert_equal 200, response.status
     end
   end
 
