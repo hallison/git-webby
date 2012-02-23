@@ -27,6 +27,6 @@ Gem::Specification.new do |spec|
     Thanks for use Git::Webby.
     #{'-'*78}
   end
-  spec.add_dependency "sinatra", ">= 1.0"
+  spec.add_dependency "sinatra", "~> 1.2"
 end
 

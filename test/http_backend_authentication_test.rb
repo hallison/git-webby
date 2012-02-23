@@ -5,6 +5,7 @@ require "rack/test"
 require "git/webby"
 
 class HttpBackendAuthenticationTest < Test::Unit::TestCase
+
   include Rack::Test::Methods
 
   def setup
@@ -33,12 +34,12 @@ class HttpBackendAuthenticationTest < Test::Unit::TestCase
   end
 
   def app
-    @app = Git::Webby::HttpBackend.configure do |server|
+    Git::Webby::HttpBackend.configure do |server|
       server.project_root = fixtures
       server.git_path     = "/usr/bin/git"
       server.authenticate = true
     end
-    @app
+    Git::Webby::HttpBackend
   end
 
   should "unauthorize repository paths" do
@@ -56,14 +57,13 @@ class HttpBackendAuthenticationTest < Test::Unit::TestCase
       verb = params.shift
       path = params.shift
       send verb, "/mycode.git/#{path}", *params
-      assert_equal 200, response.status
+      assert_equal 200, response.status, request.env["sinatra.error"]
     end
   end
 
   private
 
-  def response
-    last_response
-  end
+  alias request last_request
+  alias response last_response
 
 end

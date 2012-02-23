@@ -1,20 +1,14 @@
 module Git::Webby
 
-  module ViewerHelpers
+  class Treeish < Application
 
-    include GitHelpers
+    set :authenticate, false
+    
+    helpers GitHelpers
 
-  end
-
-  class Viewer < Controller
-
-    require "json"
-
-    helpers ViewerHelpers
-
-    set :project_root, File.expand_path("#{File.dirname(__FILE__)}/git")
-
-    mime_type :json, "application/json"
+    before do
+      authenticate! if settings.authenticate
+    end
 
     get %r{/(.*?)/(.*?/{0,1}.*)$} do |name, path|
       content_type :json
@@ -23,6 +17,10 @@ module Git::Webby
       tree = repository.tree(ref, path.join("/"))
       tree.to_json(:max_nesting => tree.size*6)
     end
+
+  private
+
+    helpers AuthenticationHelpers
 
   end
 

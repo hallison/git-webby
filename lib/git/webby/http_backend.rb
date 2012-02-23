@@ -83,10 +83,10 @@ module Git::Webby
     def run_advertisement(service)
       header_nocache
       content_type_for_git service, :advertisement
-      response.body  = ""
-      response.body += packet_write("# service=git-#{service}\n")
-      response.body += packet_flush
-      response.body += repository.run(service, "--stateless-rpc --advertise-refs .")
+      response.body.clear
+      response.body << packet_write("# service=git-#{service}\n")
+      response.body << packet_flush
+      response.body << repository.run(service, "--stateless-rpc --advertise-refs .")
       response.finish
     end
 
@@ -107,55 +107,6 @@ module Git::Webby
 
   end # HttpBackendHelpers
 
-  module HttpBackendAuthentication #:nodoc:
-
-    def htpasswd
-      @htpasswd ||= Htpasswd.new(git.path_to("htpasswd"))
-    end
-
-    def authentication
-      @authentication ||= Rack::Auth::Basic::Request.new request.env
-    end
-
-    def authenticated?
-      request.env["REMOTE_USER"] && request.env["git.webby.authenticated"]
-    end
-
-    def authenticate(username, password)
-      checked   = [ username, password ] == authentication.credentials
-      validated = authentication.provided? && authentication.basic?
-      granted   = htpasswd.authenticated? username, password
-      if checked and validated and granted
-        request.env["git.webby.authenticated"] = true
-        request.env["REMOTE_USER"] = authentication.username
-      else
-        nil
-      end
-    end
-
-    def unauthorized!(realm = Git::Webby::info)
-      headers "WWW-Authenticate" => %(Basic realm="#{realm}")
-      throw :halt, [ 401, "Authorization Required" ]
-    end
-
-    def bad_request!
-      throw :halt, [ 400, "Bad Request" ]
-    end
-
-    def authenticate!
-      return if authenticated?
-      unauthorized! unless authentication.provided?
-      bad_request!  unless authentication.basic?
-      unauthorized! unless authenticate(*authentication.credentials)
-      request.env["REMOTE_USER"] = authentication.username
-    end
-
-    def access_granted?(username, password)
-      authenticated? || authenticate(username, password)
-    end
-
-  end
-
   # The Smart HTTP handler server. This is the main Web application which respond to following requests:
   #
   # <repo.git>/HEAD           :: HEAD contents
@@ -166,13 +117,14 @@ module Git::Webby
   # <repo.git>/receive-pack   :: Post a receive packets.
   #
   # See ::configure for more details.
-  class HttpBackend < Controller
+  class HttpBackend < Application
 
-    helpers HttpBackendHelpers
-
+    set :authenticate, true
     set :get_any_file, true
     set :upload_pack,  true
     set :receive_pack, false
+
+    helpers HttpBackendHelpers
 
     before do
       authenticate! if settings.authenticate
@@ -218,9 +170,9 @@ module Git::Webby
 
   private
 
-    helpers HttpBackendAuthentication
+    helpers AuthenticationHelpers
 
-  end # HttpBackend
+  end # HttpBackendServer
 
 end # Git::Webby
 

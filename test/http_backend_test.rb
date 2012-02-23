@@ -5,6 +5,7 @@ require "rack/test"
 require "git/webby"
 
 class HttpBackendTest < Test::Unit::TestCase
+
   include Rack::Test::Methods
 
   def setup
@@ -22,7 +23,7 @@ class HttpBackendTest < Test::Unit::TestCase
   end
 
   def app
-    @app = Git::Webby::HttpBackend.configure do |server|
+    Git::Webby::HttpBackend.configure do |server|
       server.project_root = fixtures
       server.git_path     = "/usr/bin/git"
       server.get_any_file = true
@@ -30,7 +31,7 @@ class HttpBackendTest < Test::Unit::TestCase
       server.receive_pack = true
       server.authenticate = false
     end
-    @app
+    Git::Webby::HttpBackend
   end
 
   should "get head" do

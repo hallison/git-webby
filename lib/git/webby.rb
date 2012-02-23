@@ -18,6 +18,50 @@ module Git
   # - Smart-HTTP, based on _git-http-backend_.
   # - Authentication flexible based on database or configuration file like <tt>.htpasswd</tt>.
   # - API to get information about repository.
+  #
+  # This class configure the needed variables used by application. See
+  # Config::DEFAULTS for the values will be initialized by default.
+  # 
+  # Basically, the +default+ attribute set the values that will be necessary
+  # by all applications.
+  #
+  # The HTTP-Backend application is configured by +http_backend+ attribute
+  # to set the Git RCP CLI. More details about this feature, see the
+  # {git-http-backend official
+  # page}[http://www.kernel.org/pub/software/scm/git/docs/git-http-backend.html]
+  #
+  # For tree view (JSON API) just use the attribute +tree_view+.
+  #
+  # [*default*]
+  #   Default configuration. All attributes will be used by all modular
+  #   applications.
+  #
+  #   *project_root* ::
+  #     Sets the root directory where repositories have been
+  #     placed.
+  #   *git_path* ::
+  #     Path to the git command line.
+  #
+  # [*treeish*]
+  #   Configuration for Treeish JSON API.
+  #
+  #   *authenticate* ::
+  #     Sets if the tree view server requires authentication.
+  #
+  # [*http_backend*]
+  #   HTTP-Backend configuration.
+  #
+  #   *authenticate* ::
+  #     Sets if authentication is required.
+  #
+  #   *get_any_file* ::
+  #     Like +http.getanyfile+.
+  #
+  #   *upload_pack*  ::
+  #     Like +http.uploadpack+.
+  #
+  #   *receive_pack* ::
+  #     Like +http.receivepack+.
   module Webby
 
     class ProjectHandler #:nodoc:
@@ -29,17 +73,10 @@ module Git
 
       attr_reader :repository
 
-      def initialize(project_root, path = "/usr/bin/git", options = {})
-        @config       = {
-          :get_any_file => true,
-          :upload_pack  => true,
-          :receive_pack => false
-        }.update(options)
+      def initialize(project_root, path = "/usr/bin/git")
         @repository   = nil
-        @path         = File.expand_path(path)
-        @project_root = File.expand_path(project_root)
-        check_path @path
-        check_path @project_root
+        @path         = check_path(File.expand_path(path))
+        @project_root = check_path(File.expand_path(project_root))
       end
 
       def path_to(*args)
@@ -79,14 +116,16 @@ module Git
         if list
           tree = []
           list.scan %r{^(\d{3})(\d)(\d)(\d) (\w.*?) (.{6})[ \t]{0,}(.*?)\t(.*?)\n}m do
-            tree << {
+            object = {
               :ftype => ftype[$1],
               :fperm => "#{fperm[$2.to_i]}#{fperm[$3.to_i]}#{fperm[$4.to_i]}",
-              :otype => $5,
+              :otype => $5.to_sym,
               :ohash => $6,
               :fsize => fsize($7, 2),
               :fname => $8
             }
+            object[:objects] = nil if object[:otype] == :tree
+            tree << object
           end
           tree
         else
@@ -190,7 +229,7 @@ module Git
         yield self if block_given?
       end
 
-      def find(username)
+      def find(username) #:yield: password, salt
         password = @handler.get_passwd(nil, username, false)
         if block_given?
           yield password ? [password, password[0,2]] : [nil, nil]
@@ -233,7 +272,7 @@ module Git
       end
     end
 
-    module GitHelpers
+    module GitHelpers #:nodoc:
 
       def git
         @git ||= ProjectHandler.new(settings.project_root, settings.git_path)
@@ -250,21 +289,121 @@ module Git
 
     end
 
-    class Controller < Sinatra::Base
+    module AuthenticationHelpers #:nodoc:
 
-      set :project_root, "/home/git"
-      set :git_path,     "/usr/bin/git"
-      set :authenticate, false
-
-      def self.configure(*envs, &block)
-        super(*envs, &block)
-        self
+      def htpasswd
+        @htpasswd ||= Htpasswd.new(git.path_to("htpasswd"))
       end
+
+      def authentication
+        @authentication ||= Rack::Auth::Basic::Request.new request.env
+      end
+
+      def authenticated?
+        request.env["REMOTE_USER"] && request.env["git.webby.authenticated"]
+      end
+
+      def authenticate(username, password)
+        checked   = [ username, password ] == authentication.credentials
+        validated = authentication.provided? && authentication.basic?
+        granted   = htpasswd.authenticated? username, password
+        if checked and validated and granted
+          request.env["git.webby.authenticated"] = true
+          request.env["REMOTE_USER"] = authentication.username
+        else
+          nil
+        end
+      end
+
+      def unauthorized!(realm = Git::Webby::info)
+        headers "WWW-Authenticate" => %(Basic realm="#{realm}")
+        throw :halt, [ 401, "Authorization Required" ]
+      end
+
+      def bad_request!
+        throw :halt, [ 400, "Bad Request" ]
+      end
+
+      def authenticate!
+        return if authenticated?
+        unauthorized! unless authentication.provided?
+        bad_request!  unless authentication.basic?
+        unauthorized! unless authenticate(*authentication.credentials)
+        request.env["REMOTE_USER"] = authentication.username
+      end
+
+      def access_granted?(username, password)
+        authenticated? || authenticate(username, password)
+      end
+
+    end # AuthenticationHelpers
+
+    # Servers
+    autoload :HttpBackend, "git/webby/http_backend"
+    autoload :Treeish,     "git/webby/treeish"
+
+    CONFIGURATION = {
+      :default => {
+        :project_root => "/home/git",
+        :git_path     => "/usr/bin/git"
+      },
+      :treeish => {
+        :authenticate => false
+      },
+      :http_backend => {
+        :authenticate => true,
+        :get_any_file => true,
+        :upload_pack  => true,
+        :receive_pack => false
+      }
+    }
+
+    class << self
+
+      def config
+        @config ||= CONFIGURATION.to_struct
+      end
+
+      # Configure Git::Webby modules using keys. See Config for options.
+      def configure(&block)
+        yield config
+        config
+      end
+
+      def load_config_file(file)
+        @config = CONFIGURATION.update(YAML.load_file(file).symbolize_keys).to_struct
+      end
+
+      #def apply_to_class(klass, key = klass.name.to_attr_name.to_sym, &block)
     end
 
-    # Applications
-    autoload :HttpBackend, "git/webby/http_backend"
-    autoload :Viewer,      "git/webby/viewer"
+    class Application < Sinatra::Base #:nodoc:
+
+      def self.configure!
+        [:default, config_name].each do |key|
+          Git::Webby.config[key].each_pair do |option, value|
+            set option, value
+          end if Git::Webby.config.respond_to? key
+        end
+        self
+      end
+
+      def configure!
+        settings.configure!
+      end
+
+      def self.inherited(base)
+        base.configure!
+        super
+      end
+
+      def self.config_name
+        self.name.to_attr_name.to_sym
+      end
+
+      mime_type :json, "application/json"
+
+    end
 
   end
 

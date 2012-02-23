@@ -17,6 +17,15 @@ class Symbol
     self.to_s <=> other.to_s
   end
 
+  # Parse the symbol name to constant name. Example:
+  #
+  #   $ :http_backend.to_const_name
+  #   => "HttpBackend"
+  def to_const_name
+    n = self.to_s.split(/_/).map(&:capitalize).join
+    RUBY_VERSION =~ /1\.8/ ? n : n.to_sym
+  end
+
 end
 
 class Hash
@@ -42,6 +51,7 @@ class Hash
 end
 
 class String
+
   def to_semver_h
     tags   = [:major, :minor, :patch, :status]
     values = self.split(".").map do |key|
@@ -54,5 +64,10 @@ class String
     end.flatten
     Hash[tags.zip(values)]
   end
+
+  def to_attr_name
+    self.split("::").last.gsub(/(.)([A-Z])/){"#{$1}_#{$2.downcase}"}.downcase
+  end
+
 end
 
