@@ -1,0 +1,79 @@
+= Git-Webby - Web mais esperta para o Git
+
+== DESCRIÇÃO
+
+Este projeto foi inspirado no {Grack}[http://github.com/schacon/grack], um
+servidor de processos Smart-HTTP (escrito por
+{Scott Chacon}[http://github.com/schacon]), mas projetado usando
+{Sinatra}[http://www.sinatrarb.com] e visa substituir o `git-http-backend`
+original incluindo novas funcionalidades.
+
+O objetivo principal do <b>Git-Webby</b> é implementar as seguintes
+funcionalidades:
+
+- Smart-HTTP, baseado no _git-http-backend_.
+- Autenticação flexível baseado em banco de dados ou arquivo de configuração
+  como <tt>.htpasswd</tt>.
+- API para obter informações sobre o repositório (_Treeish_).
+
+== SINOPSE
+
+Instale o Git-Webby usando {Rubygems}[http://rubygems.org/gems/git-webby].
+
+  gem install git-webby
+
+Ou faça um _checkout_ do projeto hospedado no
+{Github}[http://github.com/codigorama/git-webby].
+
+  git clone https://github.com/codigorama/git-webby.git
+  ...
+  cd git-webby
+  rake install
+
+Configure o arquivo Rackup (<tt>config.ru</tt>) usando as seguintes instruções:
+
+  # config.ru
+  require "git/webby"
+
+  Git::Webby::HttpBackend.configure do |server|
+    server.project_root = "/home/git/repositories"
+    server.git_path     = "/usr/bin/git"
+    server.get_any_file = true
+    server.upload_pack  = true
+    server.receive_pack = false
+    server.authenticate = true
+  end
+
+  $ rackup --port 2011 --daemonize
+  $ git clone http://localhost:2011/mycode.git
+
+Você poderá usar o arquivo <tt>.netrc</tt> para melhorar sua conexão. Coloque
+isso:
+
+  machine <servidor> login <usuario> password <senha>
+
+O Git-Webby está em desenvolvimento, então ainda há muitas melhorias a serem
+feitas. Por favor, nos ajude a melhorar o projeto enviando seu comentário nos
+{problemas}[http://github.com/codigorama/git-webby/issues] encontrados ou
+enviando um email para
+{opensource@codigorama.com}[mailto:opensource@codigorama.com].
+
+Discuta no {Google Groups}[http://groups.google.com/group/git-webby].
+
+== AUTORES
+
+Escrito por Hallison Batista <hallison@codigorama.com>.
+
+== ERROS
+
+Se você encontrar um erro, por favor, informe no
+{gerenciador de erros}[http://github.com/codigorama/git-webby] do projeto
+Git-Webby no Github.
+
+== LICENÇA
+
+Git-Webby é Copyright (c) 2011 Hallison Batista, Codigorama.
+
+Este é um _software_ livre e pode ser redistribuído sob os termos
+especificados em LICENSE.txt.
+

@@ -12,7 +12,7 @@ The main goal of the <b>Git-Webby</b> is implement the following useful features
 
 - Smart-HTTP, based on _git-http-backend_.
 - Authentication flexible based on database or configuration file like .+htpasswd+.
-- API to get information about repository.
+- API to get information about repository (_Treeish_).
 
 == SINOPSIS
 
@@ -20,14 +20,14 @@ Install the Git-Webby using {Rubygems}[http://rubygems.org/gems/git-webby].
 
   gem install git-webby
 
-Or fork the project hosted on {Github}[http://github.com/codigorama/git-webby].
+Or checkout the project hosted on {Github}[http://github.com/codigorama/git-webby].
 
   git clone https://github.com/codigorama/git-webby.git
   ...
   cd git-webby
   rake install
 
-Configure your Rackup file (<tt>config.ru</tt>) using the following instructions:
+Configure the Rackup file (<tt>config.ru</tt>) using the following instructions:
 
   # config.ru
   require "git/webby"
@@ -49,7 +49,7 @@ You can use the <tt>.netrc</tt> for improve your connection. Put this:
   machine <host> login <username> password <password>
 
 The Git-Webby is under development, so there are still many improvements to be
-made. Please, help us to improve the project with your feedback to
+made. Please, help us to improve the project sending your feedback to
 {issues}[http://github.com/codigorama/git-webby] or sending email to
 {opensource@codigorama.com}[mailto:opensource@codigorama.com].
 
@@ -68,7 +68,6 @@ If you find a bug, please report it at the Git-Webby project's
 
 Git-Webby is Copyright (c) 2011 Hallison Batista, Codigorama.
 
-It is free software, and may be redistributed under the terms specified in
+This is free software, and may be redistributed under the terms specified in
 LICENSE.txt.
-
 
