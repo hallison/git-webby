@@ -1,8 +1,3 @@
-#:nopkg:
-ENV["RUBYLIB"] = "#{File.dirname(__FILE__)}/lib"
-ENV["RUBYOPT"] = "-rubygems"
-#:
-
 require "git/webby"
 
 def spec
