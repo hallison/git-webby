@@ -1,7 +1,7 @@
-# The objective of this class is to implement various ideas proposed by the
-# Semantic Versioning Specification (see reference[http://semver.org/]).
 module Git
 
+  # The objective of this class is to implement various ideas proposed by the
+  # Semantic Versioning Specification (see reference[http://semver.org/]).
   module Webby #:nodoc:
 
     VERSION   = "0.2.0"
@@ -15,9 +15,9 @@ module Git
     def self.to_h
       { :name      => name,
         :version   => VERSION,
+        :semver    => VERSION.to_semver_h,
         :release   => RELEASE,
-        :timestamp => TIMESTAMP,
-        :info      => info }
+        :timestamp => TIMESTAMP }
     end
 
   end
