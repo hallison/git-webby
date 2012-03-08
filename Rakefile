@@ -16,6 +16,17 @@ task :doc do
   sh "rdoc -o doc/api -H -f hanna -m README.rdoc"
 end
 
+desc "Build tags"
+task :tags do
+  rbalias = '/.*alias(_method)?[[:space:]]+:([[:alnum:]_=!?]+),?[[:space:]]+:([[:alnum:]_=!]+)/\\2/f/'
+  sh "ctags", "--recurse=yes",
+              "--tag-relative=yes",
+              "--totals=yes",
+              "--extra=+f",
+              "--fields=+iaS",
+              "--regex-ruby="+rbalias
+end
+
 desc "Build #{spec.file_name}"
 task :build => "#{spec.name}.gemspec" do
   sh "gem build #{spec.name}.gemspec"
