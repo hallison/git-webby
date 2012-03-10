@@ -1,0 +1,12 @@
+== Git-Webby v0.3.0
+
+Improvements and new features.
+
+- Fixes in the Sinatra compatibility.
+- Improvements in the treeish middleware.
+- HTGroup support.
+- The configuration can be made the rack-way, using the class itself.
+
+This is a beta version. For more informations about this release,
+please visit <http://github.com/codigorama/git-webby>.
+
