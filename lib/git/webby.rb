@@ -342,26 +342,24 @@ module Git
     autoload :HttpBackend, "git/webby/http_backend"
     autoload :Treeish,     "git/webby/treeish"
 
-    CONFIGURATION = {
-      :default => {
-        :project_root => "/home/git",
-        :git_path     => "/usr/bin/git"
-      },
-      :treeish => {
-        :authenticate => false
-      },
-      :http_backend => {
-        :authenticate => true,
-        :get_any_file => true,
-        :upload_pack  => true,
-        :receive_pack => false
-      }
-    }
-
     class << self
 
       def config
-        @config ||= CONFIGURATION.to_struct
+        @config ||= {
+          :default => {
+            :project_root => "/home/git",
+            :git_path     => "/usr/bin/git"
+          },
+          :treeish => {
+            :authenticate => false
+          },
+          :http_backend => {
+            :authenticate => true,
+            :get_any_file => true,
+            :upload_pack  => true,
+            :receive_pack => false
+          }
+        }.to_struct
       end
 
       # Configure Git::Webby modules using keys. See Config for options.

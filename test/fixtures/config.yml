@@ -1,9 +1,12 @@
-repository:
-  project_root: /var/git
-  git_path    : /usr/bin/git
+default:
+  project_root: /var/git/repos
+  git_path    : /usr/local/bin/git
+
+treeish:
   authenticate: true
 
 http_backend:
+  authenticate: true
   get_any_file: true
   upload_pack : true
   receive_pack: false
