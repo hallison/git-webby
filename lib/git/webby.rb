@@ -168,59 +168,6 @@ module Git
 
     end
 
-    # This class configure the needed variables used by application.
-    # 
-    # For HTTP-Backend configuration
-    #
-    # The following attributes was necessary by +http_backend+:
-    #
-    # *project_root*  :: Directory that contains all git repositories.
-    # *git_path*      :: Path to git command line program.
-    # *get_any_file*  :: Like <tt>http.getanyfile</tt> configuration.
-    # *upload_pack*   :: Like <tt>http.uploadpack</tt> configuration.
-    # *receive_pack*  :: Like <tt>http.receivepack</tt> configuration.
-    class Config
-
-      DEFAULTS = {
-        :repository => {
-          :project_root => "/home/git",
-          :git_path     => "/usr/bin/git",
-          :authenticate => false
-        },
-        :http_backend => {
-          :get_any_file => true,
-          :upload_pack  => true,
-          :receive_pack => false
-        }
-      }
-
-      DEFAULTS.keys.map do |attribute|
-        attr_reader attribute
-      end
-
-      def initialize(attributes = {}) # :yields: config
-        DEFAULTS.update(attributes.symbolize_keys).map do |attrib, values|
-          self.instance_variable_set("@#{attrib}", values.to_struct)
-        end
-        yield self if block_given?
-      end
-
-      def self.load_file(file)
-        require "yaml"
-        new(YAML.load_file(file))
-      end
-
-    end
-
-    class Htgroup #:nodoc:
-
-      def initialize(file)
-        require "webrick/httpauth/htgroup"
-        @handler = WEBrick::HTTPAuth::Htgroup.new(file)
-        yield self if block_given?
-      end
-    end
-
     class Htpasswd #:nodoc:
 
       def initialize(file)
@@ -369,35 +316,22 @@ module Git
       end
 
       def load_config_file(file)
-        @config = CONFIGURATION.update(YAML.load_file(file).symbolize_keys).to_struct
+        YAML.load_file(file).to_struct.each_pair do |app, options|
+          options.each_pair do |option, value|
+            config[app][option] = value
+          end
+        end
+        config
+      rescue IndexError => error
+        abort "configuration option not found"
       end
 
-      #def apply_to_class(klass, key = klass.name.to_attr_name.to_sym, &block)
     end
 
     class Application < Sinatra::Base #:nodoc:
 
-      def self.configure!
-        [:default, config_name].each do |key|
-          Git::Webby.config[key].each_pair do |option, value|
-            set option, value
-          end if Git::Webby.config.respond_to? key
-        end
-        self
-      end
-
-      def configure!
-        settings.configure!
-      end
-
-      def self.inherited(base)
-        base.configure!
-        super
-      end
-
-      def self.config_name
-        self.name.to_attr_name.to_sym
-      end
+      set :project_root, lambda { Git::Webby.config.default.project_root }
+      set :git_path,     lambda { Git::Webby.config.default.git_path }
 
       mime_type :json, "application/json"
 
